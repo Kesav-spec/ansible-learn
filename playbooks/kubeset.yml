@@ -1,0 +1,31 @@
+---
+- hosts: kube_masters
+  become: true
+  tasks:
+    - name: Install containerd package
+      apt:
+        name: containerd
+        state: latest
+        update_cache: yes
+
+    - name: configure and restart containerd
+      shell: |
+        mkdir -p /etc/containerd
+        containerd config default | sed 's/SystemCgroup = false/SystemCgroup = true/' > /etc/containerd/config.toml
+        systemctl daemon-reload
+        systemctl restart containerd
+        systemctl enable containerd
+
+      args:
+        creates: /etc/containerd/config.toml
+
+    - name: verify containerd is running
+      systemd:
+        name: containerd
+        state: started
+      register: containerd_status
+
+    - name: Display status
+      debug:
+        msg: "containerd is {{ containerd_status.status.ActiveState }}"
+
